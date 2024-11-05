@@ -35,6 +35,8 @@
         #clipPlayer {
             width: 100%;
             display: block;
+            min-height: 400px;
+            background-color: #1a1a1a;
         }
 
         .chapter {
@@ -90,9 +92,15 @@
 
         .loading-indicator {
             display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
             text-align: center;
-            padding: 1rem;
-            color: #64748b;
         }
 
         .loading-indicator.visible {
@@ -122,6 +130,16 @@
             color: #64748b;
         }
 
+        .debug-info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f8fafc;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.875rem;
+            display: none;
+        }
+
         @media (max-width: 640px) {
             .chapter-header {
                 flex-direction: column;
@@ -136,15 +154,19 @@
             <video id="clipPlayer" controls>
                 Your browser does not support the video tag.
             </video>
-            <div id="loadingIndicator" class="loading-indicator">Loading clip...</div>
+            <div id="loadingIndicator" class="loading-indicator">
+                <div>Generating clip...</div>
+                <div id="loadingStatus" style="font-size: 0.875rem; margin-top: 0.5rem"></div>
+            </div>
             <div id="errorMessage" class="error-message"></div>
+            <div id="debugInfo" class="debug-info"></div>
         </div>
         <div id="chapters"></div>
     </div>
 
     <script>
         const API_KEY = 'tlk_2FT1AC42M8MJND2SQPCN51JAJ3HS';
-        const VIDEO_ID = '672a35c9d338474c30df723c';
+        const VIDEO_ID = '672a368d1a5f2afde1137103'; // Updated video ID
         const BASE_URL = 'https://api.twelvelabs.io/v1.2';
 
         const chapters = {
@@ -183,13 +205,18 @@
 
         async function fetchVideoClip(start, end) {
             const loadingIndicator = document.getElementById('loadingIndicator');
+            const loadingStatus = document.getElementById('loadingStatus');
             const errorMessage = document.getElementById('errorMessage');
+            const debugInfo = document.getElementById('debugInfo');
             const clipPlayer = document.getElementById('clipPlayer');
 
             loadingIndicator.classList.add('visible');
             errorMessage.style.display = 'none';
+            debugInfo.style.display = 'none';
 
             try {
+                loadingStatus.textContent = 'Requesting clip generation...';
+                
                 // Create clip request
                 const clipResponse = await fetch(`${BASE_URL}/clip`, {
                     method: 'POST',
@@ -206,15 +233,21 @@
                 });
 
                 if (!clipResponse.ok) {
-                    throw new Error('Failed to generate clip');
+                    const errorData = await clipResponse.json();
+                    debugInfo.textContent = `API Response: ${JSON.stringify(errorData, null, 2)}`;
+                    debugInfo.style.display = 'block';
+                    throw new Error(errorData.message || 'Failed to generate clip');
                 }
 
                 const clipData = await clipResponse.json();
                 const clipId = clipData.clip_id;
 
                 // Poll for clip status
-                let clipStatus;
-                do {
+                loadingStatus.textContent = 'Processing clip...';
+                let attempts = 0;
+                const maxAttempts = 30; // Maximum polling attempts
+
+                while (attempts < maxAttempts) {
                     const statusResponse = await fetch(`${BASE_URL}/clip/${clipId}`, {
                         headers: {
                             'x-api-key': API_KEY
@@ -222,22 +255,29 @@
                     });
                     
                     if (!statusResponse.ok) {
-                        throw new Error('Failed to check clip status');
+                        const errorData = await statusResponse.json();
+                        throw new Error(`Status check failed: ${errorData.message}`);
                     }
 
                     const statusData = await statusResponse.json();
-                    clipStatus = statusData.status;
                     
-                    if (clipStatus === 'ready') {
+                    if (statusData.status === 'ready') {
+                        loadingStatus.textContent = 'Loading video...';
                         clipPlayer.src = statusData.url;
-                        clipPlayer.play();
+                        await clipPlayer.play();
                         break;
-                    } else if (clipStatus === 'failed') {
+                    } else if (statusData.status === 'failed') {
                         throw new Error('Clip generation failed');
                     }
 
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                } while (clipStatus === 'processing');
+                    attempts++;
+                    loadingStatus.textContent = `Processing clip... (Attempt ${attempts}/${maxAttempts})`;
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+
+                if (attempts >= maxAttempts) {
+                    throw new Error('Clip generation timed out');
+                }
 
             } catch (error) {
                 console.error('Error:', error);
