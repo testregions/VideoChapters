@@ -1,12 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- Previous head and style sections remain the same -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Chapter Player</title>
     <style>
         /* Previous styles remain the same */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f4f8;
+            color: #334155;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+
+        .video-container {
+            width: 100%;
+            margin-bottom: 2rem;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+            min-height: 400px;
+        }
+
+        .chapter {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chapter:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            background-color: #f0f7ff;
+        }
+
+        .chapter.active {
+            border-color: #1e40af;
+            background-color: #f0f7ff;
+        }
+
         .error-message {
             background-color: #fee2e2;
             color: #dc2626;
@@ -16,27 +69,15 @@
             display: none;
         }
 
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 1rem 2rem;
+        #debugInfo {
+            background-color: #f1f5f9;
+            padding: 1rem;
             border-radius: 8px;
-            display: none;
-            z-index: 10;
-        }
-
-        .loading.visible {
-            display: block;
-        }
-
-        .loading-status {
+            margin-top: 1rem;
+            font-family: monospace;
             font-size: 0.875rem;
-            margin-top: 0.5rem;
-            opacity: 0.8;
+            white-space: pre-wrap;
+            display: none;
         }
     </style>
 </head>
@@ -45,118 +86,102 @@
         <h1>Video Chapters</h1>
         
         <div class="video-container">
-            <video id="videoPlayer" controls>
-                Your browser does not support the video tag.
-            </video>
-            <div id="loading" class="loading">
-                Loading video...
-                <div id="loadingStatus" class="loading-status"></div>
-            </div>
+            <iframe id="videoPlayer" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
         </div>
         <div id="errorMessage" class="error-message"></div>
+        <div id="debugInfo"></div>
 
-        <!-- Previous chapters HTML remains the same -->
+        <div id="chapters">
+            <div class="chapter" onclick="playChapter(0, 180, this)">
+                <div class="chapter-header">
+                    <div class="chapter-number">1</div>
+                    <div class="chapter-info">
+                        <h3 class="chapter-title">Introduction to Dental Health and Orthodontic Intrusion</h3>
+                        <div class="time">0:00 - 3:00</div>
+                    </div>
+                </div>
+                <p>The video begins with Dr. Tyler Rathburn discussing the importance of dental health and orthodontic intrusion...</p>
+            </div>
+
+            <div class="chapter" onclick="playChapter(180, 360, this)">
+                <div class="chapter-header">
+                    <div class="chapter-number">2</div>
+                    <div class="chapter-info">
+                        <h3 class="chapter-title">Patient Cases and Treatment Sequencing</h3>
+                        <div class="time">3:00 - 6:00</div>
+                    </div>
+                </div>
+                <p>This chapter introduces patient cases, including John and Patrick...</p>
+            </div>
+
+            <div class="chapter" onclick="playChapter(360, 720, this)">
+                <div class="chapter-header">
+                    <div class="chapter-number">3</div>
+                    <div class="chapter-info">
+                        <h3 class="chapter-title">Orthodontic Treatment Techniques and Challenges</h3>
+                        <div class="time">6:00 - 12:00</div>
+                    </div>
+                </div>
+                <p>The video delves into various orthodontic treatment techniques...</p>
+            </div>
+
+            <div class="chapter" onclick="playChapter(720, 1424, this)">
+                <div class="chapter-header">
+                    <div class="chapter-number">4</div>
+                    <div class="chapter-info">
+                        <h3 class="chapter-title">Comprehensive Dental Care and Interdisciplinary Planning</h3>
+                        <div class="time">12:00 - 23:45</div>
+                    </div>
+                </div>
+                <p>The final chapter emphasizes the importance of comprehensive dental care...</p>
+            </div>
+        </div>
     </div>
 
     <script>
         const API_KEY = 'tlk_2FT1AC42M8MJND2SQPCN51JAJ3HS';
         const INDEX_ID = '672a368d1a5f2afde1137103';
         
-        async function playChapter(startTime, endTime) {
+        async function playChapter(startTime, endTime, chapterElement) {
             const videoPlayer = document.getElementById('videoPlayer');
-            const loading = document.getElementById('loading');
-            const loadingStatus = document.getElementById('loadingStatus');
             const errorMessage = document.getElementById('errorMessage');
+            const debugInfo = document.getElementById('debugInfo');
             
-            loading.classList.add('visible');
             errorMessage.style.display = 'none';
+            debugInfo.style.display = 'none';
             
             try {
-                // Step 1: Create clip task
-                loadingStatus.textContent = 'Requesting clip generation...';
-                const clipResponse = await fetch('https://api.twelvelabs.io/v1.2/tasks/clip', {
-                    method: 'POST',
-                    headers: {
-                        'x-api-key': API_KEY,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        index_id: INDEX_ID,
-                        start_time: startTime,
-                        end_time: endTime
-                    })
-                });
-
-                if (!clipResponse.ok) {
-                    const errorData = await clipResponse.json();
-                    throw new Error(errorData.message || 'Failed to generate clip');
-                }
-
-                const clipData = await clipResponse.json();
-                const taskId = clipData.task_id;
-
-                // Step 2: Poll for task completion
-                loadingStatus.textContent = 'Processing clip...';
-                let attempts = 0;
-                const maxAttempts = 30;
+                // Using the stream API endpoint
+                const videoUrl = `https://api.twelvelabs.io/v1.2/indexes/${INDEX_ID}/stream`;
                 
-                while (attempts < maxAttempts) {
-                    const statusResponse = await fetch(`https://api.twelvelabs.io/v1.2/tasks/${taskId}`, {
-                        headers: {
-                            'x-api-key': API_KEY
-                        }
-                    });
+                // Try using the URL with start and end times as part of the iframe source
+                const fullUrl = `${videoUrl}?start_time=${startTime}&end_time=${endTime}`;
+                
+                // Update iframe source with Authorization header
+                videoPlayer.src = fullUrl;
+                
+                // Update active chapter styling
+                document.querySelectorAll('.chapter').forEach(chapter => {
+                    chapter.classList.remove('active');
+                });
+                chapterElement.classList.add('active');
 
-                    if (!statusResponse.ok) {
-                        throw new Error('Failed to check clip status');
-                    }
-
-                    const statusData = await statusResponse.json();
-                    
-                    if (statusData.status === 'ready') {
-                        // Get the clip URL from the response
-                        const clipUrl = statusData.output?.clip_url || statusData.data?.url;
-                        if (!clipUrl) {
-                            throw new Error('No clip URL found in response');
-                        }
-
-                        loadingStatus.textContent = 'Loading video...';
-                        
-                        // Load and play the video
-                        videoPlayer.src = clipUrl;
-                        await videoPlayer.play();
-
-                        // Update active chapter styling
-                        document.querySelectorAll('.chapter').forEach(chapter => {
-                            chapter.classList.remove('active');
-                        });
-                        event.currentTarget.classList.add('active');
-                        
-                        break;
-                    } else if (statusData.status === 'failed') {
-                        throw new Error('Clip generation failed');
-                    }
-
-                    attempts++;
-                    loadingStatus.textContent = `Processing clip... (Attempt ${attempts}/${maxAttempts})`;
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-
-                if (attempts >= maxAttempts) {
-                    throw new Error('Clip generation timed out');
-                }
-
+                // Show debug info in development
+                debugInfo.textContent = `Attempting to load: ${fullUrl}`;
+                debugInfo.style.display = 'block';
+                
             } catch (error) {
                 console.error('Error:', error);
                 errorMessage.textContent = `Error: ${error.message}`;
                 errorMessage.style.display = 'block';
-            } finally {
-                loading.classList.remove('visible');
             }
         }
 
         // Play first chapter on page load
-        window.onload = () => playChapter(0, 180);
+        window.onload = () => {
+            const firstChapter = document.querySelector('.chapter');
+            playChapter(0, 180, firstChapter);
+        };
     </script>
 </body>
 </html>
