@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Chapter Player</title>
     <style>
-        /* Previous styles remain the same */
+        /* Same styles as before */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             line-height: 1.6;
@@ -37,6 +37,7 @@
             width: 100%;
             display: block;
             background: #000;
+            min-height: 400px;
         }
 
         .chapter {
@@ -100,10 +101,20 @@
             padding: 1rem 2rem;
             border-radius: 8px;
             display: none;
+            z-index: 10;
         }
 
         .loading.visible {
             display: block;
+        }
+
+        .error-message {
+            background-color: #fee2e2;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            display: none;
         }
     </style>
 </head>
@@ -117,6 +128,7 @@
             </video>
             <div id="loading" class="loading">Loading video...</div>
         </div>
+        <div id="errorMessage" class="error-message"></div>
 
         <div id="chapters">
             <div class="chapter" onclick="playChapter(0, 180)">
@@ -167,18 +179,20 @@
 
     <script>
         const API_KEY = 'tlk_2FT1AC42M8MJND2SQPCN51JAJ3HS';
-        const VIDEO_ID = '672a368d1a5f2afde1137103';
+        const INDEX_ID = '672a368d1a5f2afde1137103';
         
         async function playChapter(startTime, endTime) {
             const videoPlayer = document.getElementById('videoPlayer');
             const loading = document.getElementById('loading');
+            const errorMessage = document.getElementById('errorMessage');
             
             // Show loading indicator
             loading.classList.add('visible');
+            errorMessage.style.display = 'none';
             
             try {
                 // Construct video URL with timestamps
-                const videoUrl = `https://api.twelvelabs.io/v1.2/videos/${VIDEO_ID}/stream?start_time=${startTime}&end_time=${endTime}`;
+                const videoUrl = `https://api.twelvelabs.io/v1.2/indexes/${INDEX_ID}/stream?start_time=${startTime}&end_time=${endTime}`;
                 
                 // Fetch video with API key
                 const response = await fetch(videoUrl, {
@@ -188,7 +202,8 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error('Failed to load video');
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to load video');
                 }
                 
                 // Create blob URL from response
@@ -197,7 +212,7 @@
                 
                 // Update video source and play
                 videoPlayer.src = url;
-                videoPlayer.play();
+                await videoPlayer.play();
                 
                 // Update active chapter styling
                 document.querySelectorAll('.chapter').forEach(chapter => {
@@ -207,7 +222,8 @@
                 
             } catch (error) {
                 console.error('Error loading video:', error);
-                alert('Error loading video segment. Please try again.');
+                errorMessage.textContent = `Error: ${error.message}`;
+                errorMessage.style.display = 'block';
             } finally {
                 loading.classList.remove('visible');
             }
