@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dental Education - Video Chapters</title>
+    <title>Dental Education - Video Clips</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -15,7 +15,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             background-color: white;
             border-radius: 12px;
@@ -23,11 +23,18 @@
             padding: 2rem;
         }
 
-        h1 {
-            color: #1e40af;
-            text-align: center;
+        .video-container {
+            position: relative;
+            width: 100%;
             margin-bottom: 2rem;
-            font-size: 2rem;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #clipPlayer {
+            width: 100%;
+            display: block;
         }
 
         .chapter {
@@ -36,21 +43,40 @@
             border-radius: 8px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
         .chapter:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            background-color: #f8fafc;
+        }
+
+        .chapter.loading {
+            opacity: 0.7;
+            pointer-events: none;
         }
 
         .chapter-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
             gap: 1rem;
+        }
+
+        .play-button {
+            background-color: #1e40af;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            cursor: pointer;
         }
 
         .chapter-title {
@@ -58,71 +84,69 @@
             color: #1e40af;
             margin: 0;
             flex: 1;
+            display: flex;
+            align-items: center;
         }
 
-        .timestamp {
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+            color: #64748b;
+        }
+
+        .loading-indicator.visible {
+            display: block;
+        }
+
+        .error-message {
+            color: #dc2626;
+            background-color: #fef2f2;
+            border: 1px solid #fee2e2;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .status-badge {
             background-color: #f1f5f9;
             padding: 0.5rem 1rem;
             border-radius: 20px;
             font-size: 0.875rem;
             color: #64748b;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .chapter-number {
-            background-color: #1e40af;
-            color: white;
-            width: 24px;
-            height: 24px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.875rem;
-            margin-right: 0.75rem;
         }
 
         .chapter-content {
-            color: #64748b;
-            margin: 0;
-            padding-left: 2.5rem;
-        }
-
-        .progress-bar {
-            height: 4px;
-            background-color: #e2e8f0;
-            border-radius: 2px;
             margin-top: 1rem;
-            overflow: hidden;
-        }
-
-        .progress {
-            height: 100%;
-            background-color: #1e40af;
-            width: 0%;
-            transition: width 0.3s ease;
+            color: #64748b;
         }
 
         @media (max-width: 640px) {
             .chapter-header {
                 flex-direction: column;
             }
-            
-            .timestamp {
-                align-self: flex-start;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Dental Education Video Chapters</h1>
+        <h1>Dental Education Video Clips</h1>
+        <div class="video-container">
+            <video id="clipPlayer" controls>
+                Your browser does not support the video tag.
+            </video>
+            <div id="loadingIndicator" class="loading-indicator">Loading clip...</div>
+            <div id="errorMessage" class="error-message"></div>
+        </div>
         <div id="chapters"></div>
     </div>
 
     <script>
+        const API_KEY = 'tlk_2FT1AC42M8MJND2SQPCN51JAJ3HS';
+        const VIDEO_ID = '672a35c9d338474c30df723c';
+        const BASE_URL = 'https://api.twelvelabs.io/v1.2';
+
         const chapters = {
             "id": "544e6f36-01ff-4884-a7cd-b9d7c04da73c",
             "chapters": [
@@ -157,38 +181,93 @@
             ]
         };
 
+        async function fetchVideoClip(start, end) {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const errorMessage = document.getElementById('errorMessage');
+            const clipPlayer = document.getElementById('clipPlayer');
+
+            loadingIndicator.classList.add('visible');
+            errorMessage.style.display = 'none';
+
+            try {
+                // Create clip request
+                const clipResponse = await fetch(`${BASE_URL}/clip`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY
+                    },
+                    body: JSON.stringify({
+                        video_id: VIDEO_ID,
+                        start_time: start,
+                        end_time: end
+                    })
+                });
+
+                if (!clipResponse.ok) {
+                    throw new Error('Failed to generate clip');
+                }
+
+                const clipData = await clipResponse.json();
+                const clipId = clipData.clip_id;
+
+                // Poll for clip status
+                let clipStatus;
+                do {
+                    const statusResponse = await fetch(`${BASE_URL}/clip/${clipId}`, {
+                        headers: {
+                            'x-api-key': API_KEY
+                        }
+                    });
+                    
+                    if (!statusResponse.ok) {
+                        throw new Error('Failed to check clip status');
+                    }
+
+                    const statusData = await statusResponse.json();
+                    clipStatus = statusData.status;
+                    
+                    if (clipStatus === 'ready') {
+                        clipPlayer.src = statusData.url;
+                        clipPlayer.play();
+                        break;
+                    } else if (clipStatus === 'failed') {
+                        throw new Error('Clip generation failed');
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } while (clipStatus === 'processing');
+
+            } catch (error) {
+                console.error('Error:', error);
+                errorMessage.textContent = `Error: ${error.message}`;
+                errorMessage.style.display = 'block';
+            } finally {
+                loadingIndicator.classList.remove('visible');
+            }
+        }
+
         function formatTime(seconds) {
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = Math.floor(seconds % 60);
             return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
         }
 
-        function getProgressWidth(start, end, totalDuration) {
-            const duration = end - start;
-            return (duration / totalDuration) * 100;
-        }
-
-        const totalDuration = chapters.chapters[chapters.chapters.length - 1].end;
-
         const chaptersHTML = chapters.chapters.map(chapter => `
-            <div class="chapter">
+            <div class="chapter" onclick="fetchVideoClip(${chapter.start}, ${chapter.end})">
                 <div class="chapter-header">
                     <h2 class="chapter-title">
-                        <span class="chapter-number">${chapter.chapter_number + 1}</span>
+                        <button class="play-button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
                         ${chapter.chapter_title}
                     </h2>
-                    <div class="timestamp">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                        ${formatTime(chapter.start)} - ${formatTime(chapter.end)}
-                    </div>
+                    <span class="status-badge">${formatTime(chapter.start)} - ${formatTime(chapter.end)}</span>
                 </div>
                 <p class="chapter-content">${chapter.chapter_summary}</p>
-                <div class="progress-bar">
-                    <div class="progress" style="width: ${getProgressWidth(chapter.start, chapter.end, totalDuration)}%"></div>
-                </div>
             </div>
         `).join('');
 
