@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dental Education - Video Chapters</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f4f8;
+            color: #334155;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+
+        h1 {
+            color: #1e40af;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+        }
+
+        .chapter {
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .chapter:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .chapter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .chapter-title {
+            font-size: 1.25rem;
+            color: #1e40af;
+            margin: 0;
+            flex: 1;
+        }
+
+        .timestamp {
+            background-color: #f1f5f9;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chapter-number {
+            background-color: #1e40af;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            margin-right: 0.75rem;
+        }
+
+        .chapter-content {
+            color: #64748b;
+            margin: 0;
+            padding-left: 2.5rem;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background-color: #e2e8f0;
+            border-radius: 2px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: #1e40af;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 640px) {
+            .chapter-header {
+                flex-direction: column;
+            }
+            
+            .timestamp {
+                align-self: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dental Education Video Chapters</h1>
+        <div id="chapters"></div>
+    </div>
+
+    <script>
+        const chapters = {
+            "id": "544e6f36-01ff-4884-a7cd-b9d7c04da73c",
+            "chapters": [
+                {
+                    "chapter_number": 0,
+                    "start": 0,
+                    "end": 180,
+                    "chapter_title": "Introduction to Dental Health and Orthodontic Intrusion",
+                    "chapter_summary": "The video begins with Dr. Tyler Rathburn discussing the importance of dental health and orthodontic intrusion. He explains the concept of intrusion, its challenges, and its significance in restorative dental practices. The chapter includes detailed explanations of dental procedures, patient cases, and the biological aspects of tooth movement."
+                },
+                {
+                    "chapter_number": 1,
+                    "start": 180,
+                    "end": 360,
+                    "chapter_title": "Patient Cases and Treatment Sequencing",
+                    "chapter_summary": "This chapter introduces patient cases, including John and Patrick, and discusses their dental issues and treatment plans. Dr. Rathburn explains the importance of treatment sequencing and the challenges faced in orthodontic and restorative treatments. The chapter highlights the use of technology and patient experiences to illustrate the benefits of proper dental care."
+                },
+                {
+                    "chapter_number": 2,
+                    "start": 360,
+                    "end": 720,
+                    "chapter_title": "Orthodontic Treatment Techniques and Challenges",
+                    "chapter_summary": "The video delves into various orthodontic treatment techniques, including the use of braces and aligners. Dr. Rathburn discusses the challenges of different tooth movements, such as intrusion and torque, and compares the outcomes of using aligners versus fixed appliances. The chapter includes detailed patient case studies, highlighting the complexities and solutions in orthodontic treatments."
+                },
+                {
+                    "chapter_number": 3,
+                    "start": 720,
+                    "end": 1424.7582581,
+                    "chapter_title": "Comprehensive Dental Care and Interdisciplinary Planning",
+                    "chapter_summary": "The final chapter emphasizes the importance of comprehensive dental care and interdisciplinary planning. Dr. Rathburn discusses the need for effective communication between dental specialists and patients, the challenges of treatment planning, and the benefits of combining orthodontic and restorative treatments. The video concludes with a call to action, encouraging viewers to seek professional dental care and consider the educational resources offered by Spear Education."
+                }
+            ]
+        };
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.floor(seconds % 60);
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function getProgressWidth(start, end, totalDuration) {
+            const duration = end - start;
+            return (duration / totalDuration) * 100;
+        }
+
+        const totalDuration = chapters.chapters[chapters.chapters.length - 1].end;
+
+        const chaptersHTML = chapters.chapters.map(chapter => `
+            <div class="chapter">
+                <div class="chapter-header">
+                    <h2 class="chapter-title">
+                        <span class="chapter-number">${chapter.chapter_number + 1}</span>
+                        ${chapter.chapter_title}
+                    </h2>
+                    <div class="timestamp">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        ${formatTime(chapter.start)} - ${formatTime(chapter.end)}
+                    </div>
+                </div>
+                <p class="chapter-content">${chapter.chapter_summary}</p>
+                <div class="progress-bar">
+                    <div class="progress" style="width: ${getProgressWidth(chapter.start, chapter.end, totalDuration)}%"></div>
+                </div>
+            </div>
+        `).join('');
+
+        document.getElementById('chapters').innerHTML = chaptersHTML;
+    </script>
+</body>
+</html>
